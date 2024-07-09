@@ -1,5 +1,5 @@
 # fiat_vehicle_mqtt
-Access Fiat vehicle data and send it periodically to an MQTT broker.
+Access Fiat vehicle data and send it periodically to an MQTT broker. Send command requests (e.g. lock/unlock the door) to your car.
 
 ## Sources
 This software is based on [api.php](https://github.com/schmidmuc/fiat_vehicle/blob/main/api.php) from https://github.com/schmidmuc/fiat_vehicle with some small adjustments.
@@ -8,7 +8,7 @@ This software is based on [api.php](https://github.com/schmidmuc/fiat_vehicle/bl
 This software needs PHP 7.x to work and a running MQTT broker.
 
 ## Configuration
-After downloading the software you just need to create the configfile __fiat.cfg__ with at least the settings for your MQTT server and your Uconnect account in the software directory:
+After downloading the software you just need to create the configfile __fiat.cfg__ with at least the settings for your MQTT broker and your Uconnect account in the software download directory:
 ```
 [mqtt]
 server = <IP of your MQTT broker>
@@ -38,3 +38,31 @@ This will configure and start a docker container named __fiat__.
 
 ## Running this software from the command line
 The Debian packages __php-xml php-curl composer__ (or similar ones from other distributions) needs to be installed. Afterwards run __composer install__ in the directory where you have downloaded this software. Now run __php fiat_mqtt.php__.
+
+## Sending commands to your car
+The following commands are implemented:
+```
+  $commands = array (
+    "VF"            => "location",     // UpdateLocation (updates gps location of the car)
+    "DEEPREFRESH"   => "ev",           // DeepRefresh (same as "RefreshBatteryStatus")
+    "HBLF"          => "remote",       // Blink (blink lights)
+    "CNOW"          => "ev/chargenow", // ChargeNOW (starts charging)
+    "ROTRUNKUNLOCK" => "remote",       // Unlock trunk
+    "ROTRUNKLOCK"   => "remote",       // Lock trunk
+    "RDU"           => "remote",       // Unlock doors
+    "RDL"           => "remote",       // Lock doors
+    "ROPRECOND"     => "remote",       // Turn on/off HVAC
+  );
+
+```
+To e.g. lock the doors you could use the command:
+```
+mosquitto_pub -h <IP of MQTT broker> -p <port of MQTT broker> -m "RDL" -t fiat/<VIN of your car>/command
+```
+Maybe not all commands are working on each car. This is the list of commands I found in [api.php](https://github.com/schmidmuc/fiat_vehicle/blob/main/api.php).
+
+Additionally the command __UPDATE__ was added to immediately reread the Fiat vehicle data.
+
+## Status
+- In general it should be possible to get data for multiple vehicles attached to a given account. The MQTT client key is based on the VIN. So each car generates a differnet MQTT client key. As I only have one car, I'm not able to test this.
+- Tested with a Fiat 500e 2021
