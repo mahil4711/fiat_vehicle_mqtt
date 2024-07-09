@@ -1,5 +1,5 @@
 # fiat_vehicle_mqtt
-Access Fiat vehicle data and send it to an MQTT server.
+Access Fiat vehicle data and send it to an MQTT broker.
 
 ## Sources
 This software is based on [api.php](https://github.com/schmidmuc/fiat_vehicle/blob/main/api.php) from https://github.com/schmidmuc/fiat_vehicle with some small adjustments.
