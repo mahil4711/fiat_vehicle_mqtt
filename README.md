@@ -67,4 +67,5 @@ Additionally the command __UPDATE__ was added to immediately reread the Fiat veh
 
 ## Status
 - In general it should be possible to get data for multiple vehicles attached to a given account. The MQTT client key is based on the VIN. So each car generates a differnet MQTT client key. As I only have one car, I'm not able to test this.
-- Tested with a Fiat 500e 2021
+- Tested with a Fiat 500e 2021.
+- There is a lot of other data available via [api.php](https://github.com/schmidmuc/fiat_vehicle/blob/main/api.php). Only a subset is written to the MQTT broker. To see which data is currently published to the MQTT broker, please check the variable $payload in fiat_get_datafiat_get_data() in <link to file>.
