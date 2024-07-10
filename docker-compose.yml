@@ -1,0 +1,12 @@
+version: '3.7'
+services:
+  fiat:
+    container_name: 'fiat'
+    image: fiat:latest
+    restart: unless-stopped
+    secrets:
+      - fiat.cfg
+
+secrets:
+  fiat.cfg:
+    file: fiat.cfg
