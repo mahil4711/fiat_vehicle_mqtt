@@ -1,0 +1,8 @@
+{
+    "require": {
+        "php-mqtt/client":"1.8.*",
+        "aws/aws-sdk-php": "3.*",
+        "psr/http-message": "2.*",
+        "guzzlehttp/guzzle": "7.*"
+    }
+}
