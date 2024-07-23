@@ -22,14 +22,14 @@ password = <password for MQTT broker, leave empty if not needed>
 username = <Uconnect account email>
 password = <Uconnect account password>
 PIN = <PIN used in the Fiat app>
-GoogleApiKey = "<optional GoolgeApi key>"
 sleep = 300
 sleep_charging = 60
+GoogleApiKey = "<optional GoolgeApi key>"
 ```
 
-The [GoogleApiKey](https://support.google.com/googleapi/answer/6158862?hl=en) is needed to translate the latitude/longitude data to a real address. You could leave this empty if you do not need this.
-
 The __sleep__ parameter defines the wait time between rereading the Fiat vehicle data. The above example means, that the data will be updated every 300 seconds by default. If the car is charing the update time will be set to 60 seconds according to the parameter __sleep_charging__.
+
+The [GoogleApiKey](https://support.google.com/googleapi/answer/6158862?hl=en) is needed to translate the latitude/longitude data read from your car to a real address. You could leave this empty if you do not need this.
 
 ## Using docker to run this software
 Goto the download directory of this software. Adjust the TZ variable in __Dockerfile__ to your needs and run the following commands:
