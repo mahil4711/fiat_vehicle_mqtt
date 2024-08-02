@@ -12,7 +12,7 @@ RUN apt-get -qq update && \
 RUN mkdir /fiat
 RUN mkdir /fiat/fiat_vehicle
 COPY fiat_vehicle/ /fiat/fiat_vehicle
-COPY fiat.cfg fiat_mqtt.php fiat.sh composer.json /fiat/
+COPY fiat.cfg fiat_mqtt.php composer.json /fiat/
 RUN cd /fiat && composer install
 
 CMD cd /fiat && php fiat_mqtt.php
