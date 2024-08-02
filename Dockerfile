@@ -15,4 +15,4 @@ COPY fiat_vehicle/ /fiat/fiat_vehicle
 COPY fiat.cfg fiat_mqtt.php fiat.sh composer.json /fiat/
 RUN cd /fiat && composer install
 
-CMD bash /fiat/fiat.sh
+CMD cd /fiat && php fiat_mqtt.php

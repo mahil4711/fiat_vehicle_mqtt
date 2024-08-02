@@ -19,11 +19,11 @@ function mqtt_init($cfg, $clientId) {
     ->setLastWillQualityOfService(1);
     #->setReconnectAutomatically(false)
 
-  if ($cfg['username']) {
+  if (!empty($cfg['username'])) {
     $connectionSettings->setUsername($cfg['username'])
       ->setPassword($cfg['password']);
   }
-
+ 
   try {
     $mqtt = new MqttClient($cfg['server'], $cfg['port'], $clientId, $mqtt_version);
     $mqtt->connect($connectionSettings, $clean_session);
@@ -136,7 +136,10 @@ function fiat_get_data($cfg) {
   // Export the vehicle data information
   $json = $fiat->exportInformation();
   $x = json_decode($json, true);
-  #print_r($x);
+
+  // This will print out all possible data which could be read from the Fiat API
+  // print_r($x);
+
   $vins = array();
   foreach ($x['vehicles'] as $vehicle) {
     $vins[$vehicle['vin']] = array(
@@ -147,9 +150,6 @@ function fiat_get_data($cfg) {
 
   $is_charging = false;
   foreach ($vins as $vin => $data) {
-    // get the location address
-    $url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" . $x['vehicle'][$vin]['location']['latitude'] . ',' . $x['vehicle'][$vin]['location']['longitude'] . '&key=' . $cfg['fiat']['GoogleApiKey'];
-    $result = json_decode(file_get_contents($url));
     $payload = array(
       'vin' => $vin,
       'modelDescription' => $data['modelDescription'],
@@ -163,8 +163,20 @@ function fiat_get_data($cfg) {
       'distanceToService' => $x['vehicle'][$vin]['status']['vehicleInfo']['distanceToService']['distanceToService'],
       'location' => $x['vehicle'][$vin]['location'],
       'location_timeStamp' => epoche2time($x['vehicle'][$vin]['location']['timeStamp'], 1000),
-      'location_address' => $result->results[0]->formatted_address,
     );
+
+    if (!empty($cfg['fiat']['GoogleApiKey'])) {
+      // get the location address
+      $url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" . $x['vehicle'][$vin]['location']['latitude'] . ',' . $x['vehicle'][$vin]['location']['longitude'] . '&key=' . $cfg['fiat']['GoogleApiKey'];
+      $result = json_decode(file_get_contents($url));
+      if (isset($result->results[0]->formatted_address)) {
+        $payload['location_address'] = $result->results[0]->formatted_address;
+      } else {
+        $error_string = "Unable to translate location coordinates (" . $x['vehicle'][$vin]['location']['latitude'] . "/" . $x['vehicle'][$vin]['location']['longitude'] . ") to an address: ";
+        $error_string .= (isset($result->error_message)) ? $result->error_message : "Unknown error";
+        fiat_log($error_string);
+      }
+    }
     $is_charging = ($x['vehicle'][$vin]['status']['evInfo']['battery']['chargingStatus'] == "CHARGING") ? true : $is_charging;
     mqtt_publish($cfg['mqtt'], $vin, $payload);
     fiat_log("updated data for " . $data['nickname'] . "($vin)");
@@ -173,7 +185,11 @@ function fiat_get_data($cfg) {
 }
 
 function read_cfg() {
-  $cfg_file = (file_exists('../fiat.cfg')) ? '../fiat.cfg' : '/run/secrets/fiat.cfg';
+  $cfg_file = (file_exists('./fiat.cfg')) ? './fiat.cfg' : '/run/secrets/fiat.cfg';
+  if (! is_readable($cfg_file)) {
+    fiat_log("ERROR: could not read $cfg_file");
+    exit(3);
+  }
   fiat_log("reading config file '$cfg_file'");
   return parse_ini_file($cfg_file, 1);;
 }
@@ -187,7 +203,10 @@ function fiat_log($text) {
 #### M A I N
 ######################################################
 $cfg = read_cfg();
-$init_subscribe = ($argc > 1) ? true : false;
+
+if (empty($cfg['fiat']['GoogleApiKey'])) {
+  fiat_log("GoogleApiKey is empty, unable to translate location address");
+}
 
 $pid = pcntl_fork();
 if ($pid == -1) {
