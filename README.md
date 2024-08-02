@@ -33,7 +33,7 @@ The [GoogleApiKey](https://support.google.com/googleapi/answer/6158862?hl=en) is
 
 ## Using docker to run this software
 Goto the download directory of this software. Adjust the TZ variable in __Dockerfile__ to your needs and run the following commands:
-- docker build -t fiat
+- docker build -t fiat .
 - docker-compose up -d
 
 This will configure and start a docker container named __fiat__. 
