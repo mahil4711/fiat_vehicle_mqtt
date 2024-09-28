@@ -163,6 +163,10 @@ function fiat_get_data($cfg) {
       'distanceToService' => $x['vehicle'][$vin]['status']['vehicleInfo']['distanceToService']['distanceToService'],
       'location' => $x['vehicle'][$vin]['location'],
       'location_timeStamp' => epoche2time($x['vehicle'][$vin]['location']['timeStamp'], 1000),
+      'tyre_pressure_front_left' => $x['vehicle'][$vin]['status']['vehicleInfo']['tyrePressure']['0']['status'],
+      'tyre_pressure_front_rigth' => $x['vehicle'][$vin]['status']['vehicleInfo']['tyrePressure']['1']['status'],
+      'tyre_pressure_rear_left' => $x['vehicle'][$vin]['status']['vehicleInfo']['tyrePressure']['2']['status'],
+      'tyre_pressure_rear_right' => $x['vehicle'][$vin]['status']['vehicleInfo']['tyrePressure']['3']['status'],
     );
 
     if (!empty($cfg['fiat']['GoogleApiKey'])) {
