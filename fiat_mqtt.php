@@ -122,7 +122,7 @@ function fiat_command($cfg, $vin, $command) {
   }
 }
 
-function fiat_get_data($cfg) {
+function fiat_get_data(& $cfg) {
 
   // Create a new instance with your FIAT user account credentials
   $fiat = new apiFiat($cfg['fiat']['username'], $cfg['fiat']['password'], $cfg['fiat']['PIN']);
@@ -169,18 +169,36 @@ function fiat_get_data($cfg) {
       'tyre_pressure_rear_right' => $x['vehicle'][$vin]['status']['vehicleInfo']['tyrePressure']['3']['status'],
     );
 
-    if (!empty($cfg['fiat']['GoogleApiKey'])) {
-      // get the location address
-      $url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" . $x['vehicle'][$vin]['location']['latitude'] . ',' . $x['vehicle'][$vin]['location']['longitude'] . '&key=' . $cfg['fiat']['GoogleApiKey'];
-      $result = json_decode(file_get_contents($url));
-      if (isset($result->results[0]->formatted_address)) {
-        $payload['location_address'] = $result->results[0]->formatted_address;
-      } else {
-        $error_string = "Unable to translate location coordinates (" . $x['vehicle'][$vin]['location']['latitude'] . "/" . $x['vehicle'][$vin]['location']['longitude'] . ") to an address: ";
-        $error_string .= (isset($result->error_message)) ? $result->error_message : "Unknown error";
-        fiat_log($error_string);
+    
+    // Update location data only for changed values
+    if (! isset($cfg[$vin]['location'])
+        or $x['vehicle'][$vin]['location']['latitude'] != $x['vehicle'][$vin]['location']['latitude']
+        or $x['vehicle'][$vin]['location']['longitude'] != $x['vehicle'][$vin]['location']['longitude']) {
+
+      // save data for later reference
+      $cfg[$vin]['location'] = $x['vehicle'][$vin]['location'];
+
+      if (!empty($cfg['fiat']['LocationIQToken'])) {
+        # API reference https://docs.locationiq.com/reference/reverse-api
+        $url = "https://us1.locationiq.com/v1/reverse?normalizeaddress=1&key=" . $cfg['fiat']['LocationIQToken'] . "&lat=" . $x['vehicle'][$vin]['location']['latitude'] . "&lon=" . $x['vehicle'][$vin]['location']['longitude'] . "&format=json";
+        $result = json_decode(file_get_contents($url));
+        if (isset($result->address)) {
+          $payload['location_address'] = $result->address->road . ((isset($result->address->house_number)) ? " " . $result->address->house_number : '') . ", " . $result->address->postcode . " " . $result->address->city;
+        }
+      } elseif (!empty($cfg['fiat']['GoogleApiKey'])) {
+        // get the location address
+        $url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" . $x['vehicle'][$vin]['location']['latitude'] . ',' . $x['vehicle'][$vin]['location']['longitude'] . '&key=' . $cfg['fiat']['GoogleApiKey'];
+        $result = json_decode(file_get_contents($url));
+        if (isset($result->results[0]->formatted_address)) {
+          $payload['location_address'] = $result->results[0]->formatted_address;
+        } else {
+          $error_string = "Unable to translate location coordinates (" . $x['vehicle'][$vin]['location']['latitude'] . "/" . $x['vehicle'][$vin]['location']['longitude'] . ") to an address: ";
+          $error_string .= (isset($result->error_message)) ? $result->error_message : "Unknown error";
+          fiat_log($error_string);
+        }
       }
     }
+
     $is_charging = ($x['vehicle'][$vin]['status']['evInfo']['battery']['chargingStatus'] == "CHARGING") ? true : $is_charging;
     mqtt_publish($cfg['mqtt'], $vin, $payload);
     fiat_log("updated data for " . $data['nickname'] . "($vin)");
@@ -208,8 +226,8 @@ function fiat_log($text) {
 ######################################################
 $cfg = read_cfg();
 
-if (empty($cfg['fiat']['GoogleApiKey'])) {
-  fiat_log("GoogleApiKey is empty, unable to translate location address");
+if (empty($cfg['fiat']['GoogleApiKey']) and empty($cfg['fiat']['LocationIQToken'])) {
+  fiat_log("No key found for translating location address");
 }
 
 $pid = pcntl_fork();
