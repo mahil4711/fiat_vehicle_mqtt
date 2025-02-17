@@ -5,6 +5,9 @@ include('vendor/autoload.php');
 // Include the api file (take care of the correct path)
 include("fiat_vehicle/api.php");
 
+// used for storing location data to check if a reverse geocoding api must be called to updata location
+$location = array();
+
 use \PhpMqtt\Client\MqttClient;
 use \PhpMqtt\Client\ConnectionSettings;
 
@@ -166,6 +169,7 @@ function fiat_command($cfg, $vin, $command) {
 }
 
 function fiat_get_data($cfg) {
+  global $location;
 
   // Create a new instance with your FIAT user account credentials
   $fiat = new apiFiat($cfg['fiat']['username'], $cfg['fiat']['password'], $cfg['fiat']['PIN']);
@@ -213,22 +217,26 @@ function fiat_get_data($cfg) {
     );
 
     // Update location data only for changed values
-    if (! isset($cfg[$vin]['location'])
-        or $x['vehicle'][$vin]['location']['latitude'] != $x['vehicle'][$vin]['location']['latitude']
-        or $x['vehicle'][$vin]['location']['longitude'] != $x['vehicle'][$vin]['location']['longitude']) {
+    if (! isset($location[$vin]['location'])
+        or $x['vehicle'][$vin]['location']['latitude'] != $location[$vin]['location']['latitude']
+        or $x['vehicle'][$vin]['location']['longitude'] != $location[$vin]['location']['longitude']) {
 
       // save data for later reference
-      $cfg[$vin]['location'] = $x['vehicle'][$vin]['location'];
+      $location[$vin]['location'] = $x['vehicle'][$vin]['location'];
 
       if (!empty($cfg['fiat']['LocationIQToken'])) {
         # API reference https://docs.locationiq.com/reference/reverse-api
+        fiat_log("updating location data via LocationIQ");
         $url = "https://us1.locationiq.com/v1/reverse?normalizeaddress=1&key=" . $cfg['fiat']['LocationIQToken'] . "&lat=" . $x['vehicle'][$vin]['location']['latitude'] . "&lon=" . $x['vehicle'][$vin]['location']['longitude'] . "&format=json";
         $result = json_decode(file_get_contents($url));
         if (isset($result->address)) {
           $payload['location_address'] = $result->address->road . ((isset($result->address->house_number)) ? " " . $result->address->house_number : '') . ", " . $result->address->postcode . " " . $result->address->city;
+        } else {
+          fiat_log("unable to update location data via LocationIQ");
         }
       } elseif (!empty($cfg['fiat']['GoogleApiKey'])) {
         // get the location address
+        fiat_log("updating location data via GoogleApi");
         $url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" . $x['vehicle'][$vin]['location']['latitude'] . ',' . $x['vehicle'][$vin]['location']['longitude'] . '&key=' . $cfg['fiat']['GoogleApiKey'];
         $result = json_decode(file_get_contents($url));
         if (isset($result->results[0]->formatted_address)) {
